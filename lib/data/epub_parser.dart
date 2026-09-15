@@ -76,8 +76,12 @@ class EpubParser {
     return opf;
   }
 
+  /// Matches by local name regardless of namespace prefix — OPF metadata
+  /// almost always uses `dc:title`/`dc:creator` (Dublin Core), but
+  /// `findAllElements(localName)` alone only matches an *unprefixed* tag,
+  /// so without `namespaceUri: '*'` this would never find them.
   static String? _firstText(XmlDocument doc, String localName) {
-    for (final el in doc.findAllElements(localName)) {
+    for (final el in doc.findAllElements(localName, namespaceUri: '*')) {
       final t = el.innerText.trim();
       if (t.isNotEmpty) return t;
     }
