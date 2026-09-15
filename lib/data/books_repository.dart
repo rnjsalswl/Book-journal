@@ -19,6 +19,29 @@ class BooksRepository {
     final rows = await _client.from('books').select().eq('category', category);
     return rows.map<Book>((r) => Book.fromMap(r)).toList();
   }
+
+  /// Adds a book to the shared catalog (title/author/category only — never
+  /// the book's body text, see lib/data/local/book_content_store.dart).
+  Future<Book> create({
+    required String title,
+    required String author,
+    required String category,
+    required String colorHex,
+    required int totalPages,
+  }) async {
+    final row = await _client
+        .from('books')
+        .insert({
+          'title': title,
+          'author': author,
+          'category': category,
+          'color': colorHex,
+          'total_pages': totalPages,
+        })
+        .select()
+        .single();
+    return Book.fromMap(row);
+  }
 }
 
 class ShelfRepository {

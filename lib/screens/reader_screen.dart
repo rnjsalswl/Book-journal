@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/local/epub_import.dart';
 import '../data/reader_presence_repository.dart';
 import '../models/annotation.dart';
 import '../models/book.dart';
@@ -35,6 +36,23 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
   String? _lastUnderlineQuote;
   Map<String, ReaderPosition> _presence = {};
   late final ReaderPresenceRepository _presenceRepo;
+  bool _attaching = false;
+  ReaderContent _rc = const ReaderContent([]);
+
+  Future<void> _attachEpub() async {
+    setState(() => _attaching = true);
+    try {
+      final result = await pickAndParseEpub();
+      if (result == null) return;
+      await ref.read(bookContentStoreProvider).save(bookId: widget.book.id, paragraphs: result.epub.paragraphs);
+      ref.invalidate(bookContentProvider(widget.book.id));
+      if (mounted) PixelToastHost.of(context).show('이 기기에 본문을 연결했어요');
+    } catch (e) {
+      if (mounted) PixelToastHost.of(context).show('EPUB을 읽지 못했어요: $e');
+    } finally {
+      if (mounted) setState(() => _attaching = false);
+    }
+  }
 
   @override
   void initState() {
@@ -69,7 +87,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
 
   void _select(int pi, int si) {
     setState(() {
-      _selectedFlat = ReaderContent.flatIndex(pi, si);
+      _selectedFlat = _rc.flatIndex(pi, si);
       _tool = null;
       _annoDraft.clear();
       _replyTargetId = null;
@@ -101,7 +119,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
       if (mounted) PixelToastHost.of(context).show('밑줄을 지웠어요');
     } else {
       await repo.create(userId: userId, bookId: widget.book.id, paragraphIndex: pi, sentenceIndex: si, type: AnnotationType.underline);
-      _lastUnderlineQuote = ReaderContent.textAt(pi, si);
+      _lastUnderlineQuote = _rc.textAt(pi, si);
       if (mounted) PixelToastHost.of(context).show('밑줄을 그었어요');
     }
     ref.invalidate(annotationsProvider(widget.book.id));
@@ -114,7 +132,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
       PixelToastHost.of(context).show('내용을 적어주세요');
       return;
     }
-    final (pi, si) = ReaderContent.fromFlat(_selectedFlat!);
+    final (pi, si) = _rc.fromFlat(_selectedFlat!);
     final type = _tool == 'postit' ? AnnotationType.postit : AnnotationType.bubble;
     await ref.read(annotationsRepositoryProvider).create(
           userId: userId,
@@ -135,7 +153,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
 
   Future<void> _pickEmoji(String emoji, List<BookAnnotation> annos) async {
     if (_selectedFlat == null) return;
-    final (pi, si) = ReaderContent.fromFlat(_selectedFlat!);
+    final (pi, si) = _rc.fromFlat(_selectedFlat!);
     final target = _annotationAt(annos, pi, si, excludeUnderline: true);
     if (target != null) {
       await ref.read(annotationsRepositoryProvider).setEmoji(annotationId: target.id, emoji: emoji);
@@ -172,6 +190,10 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     for (final p in _presence.values) {
       presenceByPara.putIfAbsent(p.paragraphIndex, () => []).add(p.displayName);
     }
+
+    final contentAsync = ref.watch(bookContentProvider(widget.book.id));
+    final paragraphs = contentAsync.value;
+    _rc = ReaderContent(paragraphs ?? const []);
 
     return Scaffold(
       backgroundColor: PixelColors.paper,
@@ -210,11 +232,15 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
               ),
             ),
             Expanded(
-              child: ListView.builder(
+              child: contentAsync.isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : paragraphs == null
+                      ? _NoContentView(busy: _attaching, onAttach: _attachEpub)
+                      : ListView.builder(
                 padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
-                itemCount: kReaderParagraphs.length,
+                itemCount: paragraphs.length,
                 itemBuilder: (context, pi) {
-                  final sentences = kReaderParagraphs[pi];
+                  final sentences = paragraphs[pi];
                   final readers = presenceByPara[pi];
                   final marks = annos.where((a) => a.type != AnnotationType.underline && a.paragraphIndex == pi).toList();
                   return Padding(
@@ -245,7 +271,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                         ),
                         for (final m in marks) _AnnotationCard(annotation: m, onEmoji: () {
                           setState(() {
-                            _selectedFlat = ReaderContent.flatIndex(m.paragraphIndex, m.sentenceIndex);
+                            _selectedFlat = _rc.flatIndex(m.paragraphIndex, m.sentenceIndex);
                             _tool = 'emoji';
                           });
                         }, onReply: () {
@@ -260,7 +286,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                 },
               ),
             ),
-            if (userId != null) _buildBottomBar(userId, annos),
+            if (userId != null && paragraphs != null) _buildBottomBar(userId, annos),
           ],
         ),
       ),
@@ -270,7 +296,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
   InlineSpan _sentenceSpan(int pi, int si, String text, List<BookAnnotation> annos) {
     final underline = _annotationAt(annos, pi, si, underlineOnly: true);
     final other = _annotationAt(annos, pi, si, excludeUnderline: true);
-    final isSelected = _selectedFlat == ReaderContent.flatIndex(pi, si);
+    final isSelected = _selectedFlat == _rc.flatIndex(pi, si);
     Color? bg;
     if (underline != null) {
       bg = PixelColors.accentPale;
@@ -316,8 +342,8 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     }
 
     if (_selectedFlat != null) {
-      final (pi, si) = ReaderContent.fromFlat(_selectedFlat!);
-      final preview = ReaderContent.textAt(pi, si);
+      final (pi, si) = _rc.fromFlat(_selectedFlat!);
+      final preview = _rc.textAt(pi, si);
       return Container(
         padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
         decoration: const BoxDecoration(
@@ -414,6 +440,42 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
         foreground: active ? PixelColors.accentCream : PixelColors.textPrimary,
         onTap: onTap,
         child: Text(label, textAlign: TextAlign.center, style: PixelText.style(size: 10, height: 1.3, color: active ? PixelColors.accentCream : PixelColors.textPrimary)),
+      ),
+    );
+  }
+}
+
+class _NoContentView extends StatelessWidget {
+  final bool busy;
+  final VoidCallback onAttach;
+  const _NoContentView({required this.busy, required this.onAttach});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('이 기기엔 이 책의 본문이 없어요', style: PixelText.style(size: 13), textAlign: TextAlign.center),
+            const SizedBox(height: 8),
+            Text(
+              '가지고 계신 EPUB을 연결하면 이 기기에서만 저장돼서 읽을 수 있어요. 밑줄·댓글은 서버에 위치로만 저장되니, 같은 책을 올린 친구와는 그대로 겹쳐서 보여요.',
+              textAlign: TextAlign.center,
+              style: PixelText.style(size: 11, color: PixelColors.textMuted, height: 1.6),
+            ),
+            const SizedBox(height: 18),
+            PixelButton(
+              height: 48,
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              background: PixelColors.moss,
+              foreground: PixelColors.mossOnDark,
+              onTap: busy ? null : onAttach,
+              child: Text(busy ? '읽는 중…' : 'EPUB 연결하기', style: PixelText.style(size: 12, color: PixelColors.mossOnDark)),
+            ),
+          ],
+        ),
       ),
     );
   }

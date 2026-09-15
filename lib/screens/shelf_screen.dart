@@ -6,6 +6,7 @@ import '../theme/pixel_colors.dart';
 import '../theme/pixel_text.dart';
 import '../widgets/pixel_button.dart';
 import '../widgets/pixel_card.dart';
+import 'add_book_screen.dart';
 import 'map/overlays.dart';
 
 const _kTabs = ['전체', '읽는 중', '다 읽음', '함께'];
@@ -38,7 +39,19 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('내 서재', style: PixelText.style(size: 17, color: PixelColors.accentCream)),
+                Row(
+                  children: [
+                    Expanded(child: Text('내 서재', style: PixelText.style(size: 17, color: PixelColors.accentCream))),
+                    PixelButton(
+                      width: 36,
+                      height: 36,
+                      background: PixelColors.moss,
+                      foreground: PixelColors.mossOnDark,
+                      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AddBookScreen())),
+                      child: Text('+', style: PixelText.style(size: 18, color: PixelColors.mossOnDark)),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 5),
                 shelfAsync.when(
                   data: (entries) {

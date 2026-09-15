@@ -6,6 +6,7 @@ import '../data/annotations_repository.dart';
 import '../data/auth_repository.dart';
 import '../data/badges_repository.dart';
 import '../data/books_repository.dart';
+import '../data/local/book_content_store.dart';
 import '../data/feed_repository.dart';
 import '../data/groups_repository.dart';
 import '../data/profile_repository.dart';
@@ -32,6 +33,9 @@ final profileRepositoryProvider =
     Provider((ref) => ProfileRepository(ref.watch(supabaseClientProvider)));
 final booksRepositoryProvider =
     Provider((ref) => BooksRepository(ref.watch(supabaseClientProvider)));
+
+/// Local-only (never synced to Supabase) — see [BookContentStore].
+final bookContentStoreProvider = Provider((ref) => BookContentStore());
 final shelfRepositoryProvider =
     Provider((ref) => ShelfRepository(ref.watch(supabaseClientProvider)));
 final annotationsRepositoryProvider =
@@ -76,6 +80,10 @@ final profileProvider = FutureProvider.family<Profile, String>(
 
 final booksProvider = FutureProvider<List<Book>>(
   (ref) => ref.watch(booksRepositoryProvider).all(),
+);
+
+final bookContentProvider = FutureProvider.family<List<List<String>>?, String>(
+  (ref, bookId) => ref.watch(bookContentStoreProvider).fetch(bookId),
 );
 
 final shelfEntriesProvider = FutureProvider.family<List<ShelfEntry>, String>(
