@@ -80,8 +80,9 @@ lib/
     map/                  game loop, canvas painter, sprites, station data,
                            librarian dialogue + browse/book-detail sheets
     shelf_screen.dart     내 서재 — tabs + book grid
+    add_book_screen.dart  책 올리기 — pick an EPUB, parse it, add to the catalog
     reader_screen.dart    e-book 리더 — annotations, replies, presence
-    reader/                sample reader body text (see note below)
+    reader/                fallback sample text if a book has no local content
     review_screen.dart    감상문 작성
     feed_screen.dart      교환일기 — Wednesday's Desk group feed
     profile_screen.dart   나 — stats, heatmap, achievements
@@ -92,20 +93,35 @@ supabase/
   migrations/      SQL to run against a fresh Supabase project
 ```
 
+## E-book text: local-only, by design
+
+EPUB files are usually copyrighted, so their body text is never uploaded
+to Supabase. From **내 서재 → +** (or the reader's "EPUB 연결하기" empty
+state for a book someone else added), `lib/data/epub_parser.dart` unzips
+and parses the `.epub` entirely on-device, and
+`lib/data/local/book_content_store.dart` caches the resulting paragraphs
+in that browser/device's local storage (`shared_preferences`) under the
+book's id — nothing else about the text ever leaves the device.
+
+What *does* sync through Supabase is just:
+- the book's **title/author/category** (catalog metadata, `books` table)
+- every underline/comment/post-it's **(paragraph_index, sentence_index)
+  coordinate** (`annotations` table) — never the sentence text itself
+
+So two people only see each other's annotations lined up correctly once
+they've each imported the same edition of the book onto their own
+device — the server is coordinating positions, not hosting content.
+
 ## What's a placeholder vs. real
 
-- **E-book text**: there's no book-ingestion pipeline. `reader/reader_content.dart`
-  holds one sample excerpt (the prototype's demo book, "모래의 도시") that's
-  shown for whichever book you open, so the annotation/review flow has real
-  text to operate on end-to-end. Swapping in real per-book text means adding
-  a `book_pages`-style table and paginating the reader off of it.
 - **Pixel sprites**: still code-drawn (`screens/map/pixel_sprites.dart`),
   same as the prototype — swap in real spritesheets by replacing the
   `drawPixelSprite` calls with `Image`/`SpriteSheet` rendering.
-- **Everything else** (auth, profiles, shelf/reading progress, annotations +
-  replies, the exchange-diary feed + reactions, reviews, XP/leveling,
-  badges, reading-log heatmap, quests, friend reading-presence) is wired to
-  real Supabase tables/RPCs — see `supabase/migrations/`.
+- **Everything else** (auth, profiles, shelf/reading progress, EPUB import,
+  annotations + replies, the exchange-diary feed + reactions, reviews,
+  XP/leveling, badges, reading-log heatmap, quests, friend
+  reading-presence) is wired to real Supabase tables/RPCs (metadata and
+  coordinates only, per above) — see `supabase/migrations/`.
 
 ## Verification done so far
 

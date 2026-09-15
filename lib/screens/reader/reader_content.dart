@@ -1,12 +1,7 @@
-/// Sample e-book body text (the opening of "모래의 도시", the prototype's
-/// demo book), split into paragraphs of sentences so annotations can point
-/// at a precise (paragraph, sentence) pair.
-///
-/// There's no real e-book ingestion pipeline yet — ingesting/paginating
-/// actual book text is a separate feature. This placeholder is shown for
-/// whichever book is opened so the annotation/review flow has real text to
-/// operate on end to end.
-const List<List<String>> kReaderParagraphs = [
+/// Shown when a book has no locally-imported text yet — see
+/// lib/data/local/book_content_store.dart for why the text lives on-device
+/// only rather than being fetched from a server.
+const List<List<String>> kSampleReaderParagraphs = [
   [
     '도시의 모든 문은 바깥쪽으로만 열렸다.',
     '그래서 사람들은 집에 들어갈 때마다 잠시 바깥에 서서 기다리는 습관을 갖게 되었다.',
@@ -24,25 +19,31 @@ const List<List<String>> kReaderParagraphs = [
   ],
 ];
 
+/// Flat-sentence-index <-> (paragraph, sentence) math over one book's
+/// paragraphs. Annotations store the (paragraph, sentence) pair — this is
+/// just a convenience for the reader's tap-to-select UI, which thinks in
+/// terms of one flat running index while walking sentences on screen.
 class ReaderContent {
-  static int flatIndex(int paragraphIndex, int sentenceIndex) {
+  final List<List<String>> paragraphs;
+  const ReaderContent(this.paragraphs);
+
+  int flatIndex(int paragraphIndex, int sentenceIndex) {
     var base = 0;
     for (var i = 0; i < paragraphIndex; i++) {
-      base += kReaderParagraphs[i].length;
+      base += paragraphs[i].length;
     }
     return base + sentenceIndex;
   }
 
-  static (int paragraphIndex, int sentenceIndex) fromFlat(int flat) {
+  (int paragraphIndex, int sentenceIndex) fromFlat(int flat) {
     var remaining = flat;
-    for (var pi = 0; pi < kReaderParagraphs.length; pi++) {
-      final len = kReaderParagraphs[pi].length;
+    for (var pi = 0; pi < paragraphs.length; pi++) {
+      final len = paragraphs[pi].length;
       if (remaining < len) return (pi, remaining);
       remaining -= len;
     }
-    return (kReaderParagraphs.length - 1, kReaderParagraphs.last.length - 1);
+    return (paragraphs.length - 1, paragraphs.last.length - 1);
   }
 
-  static String textAt(int paragraphIndex, int sentenceIndex) =>
-      kReaderParagraphs[paragraphIndex][sentenceIndex];
+  String textAt(int paragraphIndex, int sentenceIndex) => paragraphs[paragraphIndex][sentenceIndex];
 }
