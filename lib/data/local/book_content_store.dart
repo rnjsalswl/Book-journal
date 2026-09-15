@@ -1,6 +1,9 @@
 import 'dart:convert';
 
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'seed_books.dart';
 
 /// On-device-only cache of a book's body text (paragraphs of sentences).
 ///
@@ -17,7 +20,15 @@ class BookContentStore {
   Future<List<List<String>>?> fetch(String bookId) async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_key(bookId));
-    if (raw == null) return null;
+    if (raw != null) return _decode(raw);
+
+    final assetPath = kSeedBookAssets[bookId];
+    if (assetPath == null) return null;
+    final bundled = await rootBundle.loadString(assetPath);
+    return _decode(bundled);
+  }
+
+  List<List<String>> _decode(String raw) {
     final decoded = jsonDecode(raw) as List;
     return decoded.map<List<String>>((p) => (p as List).cast<String>()).toList();
   }
@@ -29,7 +40,7 @@ class BookContentStore {
 
   Future<bool> has(String bookId) async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.containsKey(_key(bookId));
+    return prefs.containsKey(_key(bookId)) || kSeedBookAssets.containsKey(bookId);
   }
 
   Future<void> remove(String bookId) async {
