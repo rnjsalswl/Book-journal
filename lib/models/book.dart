@@ -18,6 +18,13 @@ class Book {
   final Color color;
   final int totalPages;
 
+  /// This book's id in an external catalog (e.g. a library's own e-book
+  /// system), if this row was linked/imported from one — null for
+  /// everything today (seed catalog, EPUB-imported books). Lets a future
+  /// `LibraryApiContentSource` know what to ask the external API for; see
+  /// lib/data/content/library_api_content_source.dart.
+  final String? externalRef;
+
   const Book({
     required this.id,
     required this.title,
@@ -25,6 +32,7 @@ class Book {
     required this.category,
     required this.color,
     required this.totalPages,
+    this.externalRef,
   });
 
   factory Book.fromMap(Map<String, dynamic> m) => Book(
@@ -34,6 +42,7 @@ class Book {
         category: m['category'] as String,
         color: _parseHex(m['color'] as String? ?? '#8c491a'),
         totalPages: (m['total_pages'] as num?)?.toInt() ?? 200,
+        externalRef: m['external_ref'] as String?,
       );
 
   static Color _parseHex(String hex) {

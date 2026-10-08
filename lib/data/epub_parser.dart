@@ -1,8 +1,9 @@
 import 'dart:convert';
 
 import 'package:archive/archive.dart';
-import 'package:html/parser.dart' as html_parser;
 import 'package:xml/xml.dart';
+
+import 'content/text_segmenter.dart';
 
 class ParsedEpub {
   final String title;
@@ -54,7 +55,7 @@ class EpubParser {
       final path = _resolve(opfDir, href);
       final file = filesByPath[path];
       if (file == null) continue;
-      paragraphs.addAll(_extractParagraphs(_readText(file)));
+      paragraphs.addAll(segmentHtmlToParagraphs(_readText(file)));
     }
 
     return ParsedEpub(title: title.trim(), author: author.trim(), paragraphs: paragraphs);
@@ -104,31 +105,4 @@ class EpubParser {
   }
 
   static String _readText(ArchiveFile file) => utf8.decode(file.content, allowMalformed: true);
-
-  /// Strips XHTML down to paragraph blocks, then splits each block into
-  /// sentences (Korean/English enders `. ! ?` kept with the sentence).
-  static List<List<String>> _extractParagraphs(String xhtml) {
-    final doc = html_parser.parse(xhtml);
-    final blocks = doc.querySelectorAll('p, h1, h2, h3, h4, li, blockquote');
-    final source = blocks.isNotEmpty ? blocks : [doc.body ?? doc.documentElement!];
-
-    final paragraphs = <List<String>>[];
-    for (final block in source) {
-      final text = block.text.replaceAll(RegExp(r'\s+'), ' ').trim();
-      if (text.isEmpty) continue;
-      final sentences = _splitSentences(text);
-      if (sentences.isNotEmpty) paragraphs.add(sentences);
-    }
-    return paragraphs;
-  }
-
-  static final _sentenceEnd = RegExp(r'(?<=[.!?…。！？])\s+');
-
-  static List<String> _splitSentences(String paragraph) {
-    return paragraph
-        .split(_sentenceEnd)
-        .map((s) => s.trim())
-        .where((s) => s.isNotEmpty)
-        .toList();
-  }
 }
