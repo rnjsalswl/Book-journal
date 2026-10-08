@@ -22,12 +22,16 @@ class BooksRepository {
 
   /// Adds a book to the shared catalog (title/author/category only — never
   /// the book's body text, see lib/data/local/book_content_store.dart).
+  /// [externalRef] is for a future library-catalog import/link (see
+  /// lib/data/content/library_api_content_source.dart) — nothing sets it
+  /// today.
   Future<Book> create({
     required String title,
     required String author,
     required String category,
     required String colorHex,
     required int totalPages,
+    String? externalRef,
   }) async {
     final row = await _client
         .from('books')
@@ -37,6 +41,7 @@ class BooksRepository {
           'category': category,
           'color': colorHex,
           'total_pages': totalPages,
+          'external_ref': externalRef,
         })
         .select()
         .single();
