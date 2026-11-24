@@ -417,10 +417,14 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
             child: Text('문장을 누르면 밑줄 · 말풍선 · 포스트잇을 붙일 수 있어요',
                 style: PixelText.style(size: 10, color: PixelColors.textMuted, height: 1.5)),
           ),
+          const SizedBox(width: 8),
+          // PixelButton은 내부에서 width: double.infinity를 쓰기 때문에
+          // Row 안에서는 너비를 꼭 지정해야 함. 안 주면 버튼이 가로를 전부 먹어서
+          // 왼쪽 안내 문구가 0폭이 되고 글자가 세로로 쌓임.
           PixelButton(
+            width: 72,
             height: 42,
             background: PixelColors.accent,
-            padding: const EdgeInsets.symmetric(horizontal: 13),
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => ReviewScreen(book: widget.book, quote: _lastUnderlineQuote)),
             ),

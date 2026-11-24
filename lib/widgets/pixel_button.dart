@@ -102,12 +102,18 @@ class _PixelButtonState extends State<PixelButton> {
           // `alignment` above) otherwise gives children loose constraints,
           // so a Column child would shrink to its own width instead of
           // filling card-style buttons (book tiles, list rows).
-          child: SizedBox(
-            width: double.infinity,
-            child: DefaultTextStyle.merge(
-              style: PixelText.style(color: widget.foreground),
-              textAlign: TextAlign.center,
-              child: widget.child,
+          //
+          // 단, Row·Wrap 안처럼 가로 제한이 없는 곳에서 double.infinity를 쓰면
+          // 버튼이 가로를 전부 차지해 옆 위젯이 0폭이 되고(글자가 세로로 쌓임)
+          // 버튼 자체도 화면 밖으로 밀려난다. 그래서 제한이 있을 때만 꽉 채운다.
+          child: LayoutBuilder(
+            builder: (context, constraints) => SizedBox(
+              width: constraints.hasBoundedWidth ? double.infinity : null,
+              child: DefaultTextStyle.merge(
+                style: PixelText.style(color: widget.foreground),
+                textAlign: TextAlign.center,
+                child: widget.child,
+              ),
             ),
           ),
         ),
