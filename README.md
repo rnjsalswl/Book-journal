@@ -1,5 +1,9 @@
 # 픽셀 책방 일지 (Pixel Book Journal)
 
+🔗 **웹 데모:** https://rnjsalswl.github.io/Book-journal/  ·  📐 **설계 문서:** [docs/DESIGN.md](docs/DESIGN.md)
+
+<img src="docs/images/login-mobile.png" alt="픽셀 책방 일지 로그인 화면" width="280">
+
 A Flutter implementation of the `Pixel Book Journal.dc.html` Claude Design
 prototype (see `../README.md`, `../chats/chat1.md`, `../project/` for the
 original handoff bundle): a Stardew-Valley-style pixel library you walk
