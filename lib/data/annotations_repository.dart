@@ -51,20 +51,21 @@ class AnnotationsRepository {
     return row['id'] as String;
   }
 
-  Future<void> removeUnderline({
-    required String userId,
+  /// Atomically toggles the underline at this position. Returns true if the
+  /// sentence is now underlined, false if the underline was removed.
+  /// Done server-side (via `toggle_underline` RPC) so rapid taps can't race
+  /// a client-side read-then-write and leave duplicate rows.
+  Future<bool> toggleUnderline({
     required String bookId,
     required int paragraphIndex,
     required int sentenceIndex,
   }) async {
-    await _client
-        .from('annotations')
-        .delete()
-        .eq('user_id', userId)
-        .eq('book_id', bookId)
-        .eq('paragraph_index', paragraphIndex)
-        .eq('sentence_index', sentenceIndex)
-        .eq('type', 'underline');
+    final result = await _client.rpc('toggle_underline', params: {
+      'p_book_id': bookId,
+      'p_paragraph_index': paragraphIndex,
+      'p_sentence_index': sentenceIndex,
+    });
+    return result as bool;
   }
 
   Future<void> setEmoji({required String annotationId, required String emoji}) async {

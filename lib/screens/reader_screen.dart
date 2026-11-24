@@ -110,17 +110,18 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     return null;
   }
 
-  Future<void> _toggleUnderline(int pi, int si, {required String userId}) async {
+  Future<void> _toggleUnderline(int pi, int si) async {
     final repo = ref.read(annotationsRepositoryProvider);
-    final annos = ref.read(annotationsProvider(widget.book.id)).value ?? [];
-    final mine = annos.where((a) => a.type == AnnotationType.underline && a.userId == userId && a.paragraphIndex == pi && a.sentenceIndex == si);
-    if (mine.isNotEmpty) {
-      await repo.removeUnderline(userId: userId, bookId: widget.book.id, paragraphIndex: pi, sentenceIndex: si);
-      if (mounted) PixelToastHost.of(context).show('밑줄을 지웠어요');
-    } else {
-      await repo.create(userId: userId, bookId: widget.book.id, paragraphIndex: pi, sentenceIndex: si, type: AnnotationType.underline);
+    final nowUnderlined = await repo.toggleUnderline(
+      bookId: widget.book.id,
+      paragraphIndex: pi,
+      sentenceIndex: si,
+    );
+    if (nowUnderlined) {
       _lastUnderlineQuote = _rc.textAt(pi, si);
       if (mounted) PixelToastHost.of(context).show('밑줄을 그었어요');
+    } else {
+      if (mounted) PixelToastHost.of(context).show('밑줄을 지웠어요');
     }
     ref.invalidate(annotationsProvider(widget.book.id));
     if (mounted) setState(() => _selectedFlat = null);
@@ -358,7 +359,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
             const SizedBox(height: 8),
             Row(
               children: [
-                _toolButton('underline', '형광펜\n밑줄', () => _toggleUnderline(pi, si, userId: userId)),
+                _toolButton('underline', '형광펜\n밑줄', () => _toggleUnderline(pi, si)),
                 const SizedBox(width: 6),
                 _toolButton('bubble', '말풍선\n코멘트', () => setState(() => _tool = 'bubble')),
                 const SizedBox(width: 6),
