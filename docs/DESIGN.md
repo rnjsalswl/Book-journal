@@ -225,8 +225,7 @@ erDiagram
 
 ## 7. 아직 부족한 점
 
-- [ ] 🚨 **XP·독서시간 함수에 본인 확인이 없어요.** `increment_profile_xp(p_user_id, p_amount)`, `increment_reading_minutes(p_user_id, …)`가 `security definer`(RLS 무시)인데 `p_user_id = auth.uid()` 검사가 없어요 → 로그인한 사람 누구나 **남의 XP를 마음대로** 올릴 수 있어요. 음수나 엄청 큰 값도 막지 않아요
-  - 고치는 법: 함수 안에서 `if p_user_id <> auth.uid() then raise exception …` + 값 범위 제한
+- [x] 🚨 ~~XP·독서시간 함수에 본인 확인이 없어요.~~ → `0006_rpc_caller_checks.sql`에서 `auth.uid()` 확인, 값 범위 제한(XP 1~100, 독서 1~60분·어제~내일, 배지 1~10), 비로그인 호출 차단으로 수정
 - [ ] 👥 모임 초대 기능이 없어요 (지금은 DB에 `group_members`를 직접 넣어야 해요)
 - [ ] 📍 판본이 다르면 좌표가 어긋나요 → 책마다 문단 수 같은 "지문(fingerprint)"을 저장해서 판본이 다르면 경고하면 좋아요
 - [ ] 💾 본문이 `shared_preferences`에 있어요 → 큰 책엔 안 맞아요. 파일 저장소나 SQLite로 옮기는 게 좋아요
