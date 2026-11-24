@@ -96,19 +96,29 @@ class _PixelButtonState extends State<PixelButton> {
           ),
           decoration: decoration,
           alignment: Alignment.center,
-          // `width: double.infinity` here (not on the AnimatedContainer
-          // itself) makes the button's content span the button's full
-          // width while keeping height intrinsic — Align (from the
-          // `alignment` above) otherwise gives children loose constraints,
-          // so a Column child would shrink to its own width instead of
-          // filling card-style buttons (book tiles, list rows).
-          child: SizedBox(
-            width: double.infinity,
-            child: DefaultTextStyle.merge(
-              style: PixelText.style(color: widget.foreground),
-              textAlign: TextAlign.center,
-              child: widget.child,
-            ),
+          // Align (from the `alignment` above) gives its child loose
+          // constraints, so by default a Column/Row child shrinks to its
+          // own size instead of filling card-style buttons (book tiles,
+          // list rows). Stretching it to `double.infinity` fixes that —
+          // but only when this button's own box got a *bounded* width
+          // from its parent (a GridView cell, a full-width ListView item,
+          // an Expanded). When a PixelButton sits as a plain, unsized
+          // sibling in a Row (e.g. next to an Expanded label), the Row
+          // gives it unbounded width, and forcing `double.infinity` there
+          // makes the whole button want infinite width — collapsing the
+          // sibling's space instead. LayoutBuilder lets us tell those two
+          // cases apart and only stretch when it's safe to.
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SizedBox(
+                width: constraints.maxWidth.isFinite ? double.infinity : null,
+                child: DefaultTextStyle.merge(
+                  style: PixelText.style(color: widget.foreground),
+                  textAlign: TextAlign.center,
+                  child: widget.child,
+                ),
+              );
+            },
           ),
         ),
       ),
