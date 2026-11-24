@@ -2,7 +2,7 @@
 
 🔗 **웹 데모:** https://rnjsalswl.github.io/Book-journal/  ·  📐 **설계 문서:** [docs/DESIGN.md](docs/DESIGN.md)
 
-<img src="docs/images/login-mobile.png" alt="픽셀 책방 일지 로그인 화면" width="280">
+<img src="docs/images/bookjournal-library.jpg" alt="서관 맵" width="200"> <img src="docs/images/bookjournal-reader.jpg" alt="리더" width="200"> <img src="docs/images/bookjournal-diary.jpg" alt="교환일기" width="200"> <img src="docs/images/bookjournal-profile.jpg" alt="프로필" width="200">
 
 A Flutter implementation of the `Pixel Book Journal.dc.html` Claude Design
 prototype (see `../README.md`, `../chats/chat1.md`, `../project/` for the
